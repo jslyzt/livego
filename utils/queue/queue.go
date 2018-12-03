@@ -2,15 +2,15 @@ package queue
 
 import (
 	"sync"
-	"github.com/gwuhaolin/livego/av"
+
+	"github.com/jslyzt/livego/av"
 )
 
 // Queue is a basic FIFO queue for Messages.
 type Queue struct {
 	maxSize int
-
-	list  []*av.Packet
-	mutex sync.Mutex
+	list    []*av.Packet
+	mutex   sync.Mutex
 }
 
 // NewQueue returns a new Queue. If maxSize is greater than zero the queue will

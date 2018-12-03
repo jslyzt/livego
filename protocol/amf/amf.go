@@ -1,11 +1,11 @@
 package amf
 
 import (
-	"errors"
 	"fmt"
 	"io"
 )
 
+// DecodeBatch 批量解码
 func (d *Decoder) DecodeBatch(r io.Reader, ver Version) (ret []interface{}, err error) {
 	var v interface{}
 	for {
@@ -18,6 +18,7 @@ func (d *Decoder) DecodeBatch(r io.Reader, ver Version) (ret []interface{}, err 
 	return
 }
 
+// Decode 解码
 func (d *Decoder) Decode(r io.Reader, ver Version) (interface{}, error) {
 	switch ver {
 	case 0:
@@ -26,9 +27,10 @@ func (d *Decoder) Decode(r io.Reader, ver Version) (interface{}, error) {
 		return d.DecodeAmf3(r)
 	}
 
-	return nil, errors.New(fmt.Sprintf("decode amf: unsupported version %d", ver))
+	return nil, fmt.Errorf("decode amf: unsupported version %d", ver)
 }
 
+// EncodeBatch 批量加密
 func (e *Encoder) EncodeBatch(w io.Writer, ver Version, val ...interface{}) (int, error) {
 	for _, v := range val {
 		if _, err := e.Encode(w, v, ver); err != nil {
@@ -38,6 +40,7 @@ func (e *Encoder) EncodeBatch(w io.Writer, ver Version, val ...interface{}) (int
 	return 0, nil
 }
 
+// Encode 加密
 func (e *Encoder) Encode(w io.Writer, val interface{}, ver Version) (int, error) {
 	switch ver {
 	case AMF0:

@@ -3,14 +3,15 @@ package hls
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"path"
 	"strconv"
 	"strings"
 	"time"
-	"log"
-	"github.com/gwuhaolin/livego/av"
+
+	"github.com/jslyzt/livego/av"
 	"github.com/orcaman/concurrent-map"
 )
 
@@ -18,6 +19,7 @@ const (
 	duration = 3000
 )
 
+// 变量
 var (
 	ErrNoPublisher         = errors.New("No publisher")
 	ErrInvalidReq          = errors.New("invalid req url path")
@@ -31,11 +33,13 @@ var crossdomainxml = []byte(`<?xml version="1.0" ?>
 	<allow-http-request-headers-from domain="*" headers="*"/>
 </cross-domain-policy>`)
 
+// Server 服务
 type Server struct {
 	listener net.Listener
 	conns    cmap.ConcurrentMap
 }
 
+// NewServer 新建服务
 func NewServer() *Server {
 	ret := &Server{
 		conns: cmap.New(),
@@ -44,6 +48,7 @@ func NewServer() *Server {
 	return ret
 }
 
+// Serve 服务
 func (server *Server) Serve(listener net.Listener) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -54,6 +59,7 @@ func (server *Server) Serve(listener net.Listener) error {
 	return nil
 }
 
+// GetWriter 获取写入
 func (server *Server) GetWriter(info av.Info) av.WriteCloser {
 	var s *Source
 	ok := server.conns.Has(info.Key)
@@ -155,6 +161,5 @@ func (server *Server) parseTs(pathstr string) (key string, err error) {
 		return
 	}
 	key = paths[0] + "/" + paths[1]
-
 	return
 }

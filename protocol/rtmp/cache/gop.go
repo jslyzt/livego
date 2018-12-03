@@ -2,12 +2,14 @@ package cache
 
 import (
 	"errors"
-	"github.com/gwuhaolin/livego/av"
+
+	"github.com/jslyzt/livego/av"
 )
 
+// 变量定义
 var (
-	maxGOPCap    int = 1024
-	ErrGopTooBig     = errors.New("gop to big")
+	maxGOPCap    = 1024
+	ErrGopTooBig = errors.New("gop to big")
 )
 
 type array struct {
@@ -48,6 +50,7 @@ func (array *array) send(w av.WriteCloser) error {
 	return err
 }
 
+// GopCache gop缓存
 type GopCache struct {
 	start     bool
 	num       int
@@ -56,6 +59,7 @@ type GopCache struct {
 	gops      []*array
 }
 
+// NewGopCache 新建gop缓存
 func NewGopCache(num int) *GopCache {
 	return &GopCache{
 		count: num,
@@ -83,6 +87,7 @@ func (gopCache *GopCache) writeToArray(chunk *av.Packet, startNew bool) error {
 	return nil
 }
 
+// Write 写
 func (gopCache *GopCache) Write(p *av.Packet) {
 	var ok bool
 	if p.IsVideo {
@@ -114,6 +119,7 @@ func (gopCache *GopCache) sendTo(w av.WriteCloser) error {
 	return nil
 }
 
+// Send 发送
 func (gopCache *GopCache) Send(w av.WriteCloser) error {
 	return gopCache.sendTo(w)
 }

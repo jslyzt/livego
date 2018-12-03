@@ -3,33 +3,38 @@ package httpopera
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gwuhaolin/livego/protocol/rtmp/rtmprelay"
 	"io"
+	"log"
 	"net"
 	"net/http"
-	"log"
-	"github.com/gwuhaolin/livego/av"
-	"github.com/gwuhaolin/livego/protocol/rtmp"
+
+	"github.com/jslyzt/livego/av"
+	"github.com/jslyzt/livego/protocol/rtmp"
+	"github.com/jslyzt/livego/protocol/rtmp/rtmprelay"
 )
 
+// Response 返回
 type Response struct {
 	w       http.ResponseWriter
 	Status  int    `json:"status"`
 	Message string `json:"message"`
 }
 
-func (r *Response) SendJson() (int, error) {
+// SendJSON 发送json
+func (r *Response) SendJSON() (int, error) {
 	resp, _ := json.Marshal(r)
 	r.w.Header().Set("Content-Type", "application/json")
 	return r.w.Write(resp)
 }
 
+// Operation 操作
 type Operation struct {
 	Method string `json:"method"`
 	URL    string `json:"url"`
 	Stop   bool   `json:"stop"`
 }
 
+// OperationChange 操作变化
 type OperationChange struct {
 	Method    string `json:"method"`
 	SourceURL string `json:"source_url"`
@@ -37,18 +42,21 @@ type OperationChange struct {
 	Stop      bool   `json:"stop"`
 }
 
+// ClientInfo 客户端信息
 type ClientInfo struct {
 	url              string
 	rtmpRemoteClient *rtmp.Client
 	rtmpLocalClient  *rtmp.Client
 }
 
+// Server 服务
 type Server struct {
 	handler  av.Handler
 	session  map[string]*rtmprelay.RtmpRelay
 	rtmpAddr string
 }
 
+// NewServer 新建服务
 func NewServer(h av.Handler, rtmpAddr string) *Server {
 	return &Server{
 		handler:  h,
@@ -57,6 +65,7 @@ func NewServer(h av.Handler, rtmpAddr string) *Server {
 	}
 }
 
+// Serve 服务
 func (s *Server) Serve(l net.Listener) error {
 	mux := http.NewServeMux()
 
@@ -77,12 +86,12 @@ func (s *Server) Serve(l net.Listener) error {
 
 type stream struct {
 	Key             string `json:"key"`
-	Url             string `json:"Url"`
-	StreamId        uint32 `json:"StreamId"`
-	VideoTotalBytes uint64 `json:123456`
-	VideoSpeed      uint64 `json:123456`
-	AudioTotalBytes uint64 `json:123456`
-	AudioSpeed      uint64 `json:123456`
+	URL             string `json:"Url"`
+	StreamID        uint32 `json:"StreamId"`
+	VideoTotalBytes uint64 `json:"videototalbytes"`
+	VideoSpeed      uint64 `json:"videospeed"`
+	AudioTotalBytes uint64 `json:"audiototalbytes"`
+	AudioSpeed      uint64 `json:"audiospeed"`
 }
 
 type streams struct {
@@ -91,8 +100,10 @@ type streams struct {
 }
 
 //http://127.0.0.1:8090/stat/livestat
-func (server *Server) GetLiveStatics(w http.ResponseWriter, req *http.Request) {
-	rtmpStream := server.handler.(*rtmp.RtmpStream)
+
+// GetLiveStatics 直播
+func (s *Server) GetLiveStatics(w http.ResponseWriter, req *http.Request) {
+	rtmpStream := s.handler.(*rtmp.RtmpStream)
 	if rtmpStream == nil {
 		io.WriteString(w, "<h1>Get rtmp stream information error</h1>")
 		return
@@ -105,7 +116,7 @@ func (server *Server) GetLiveStatics(w http.ResponseWriter, req *http.Request) {
 				switch s.GetReader().(type) {
 				case *rtmp.VirReader:
 					v := s.GetReader().(*rtmp.VirReader)
-					msg := stream{item.Key, v.Info().URL, v.ReadBWInfo.StreamId, v.ReadBWInfo.VideoDatainBytes, v.ReadBWInfo.VideoSpeedInBytesperMS,
+					msg := stream{item.Key, v.Info().URL, v.ReadBWInfo.StreamID, v.ReadBWInfo.VideoDatainBytes, v.ReadBWInfo.VideoSpeedInBytesperMS,
 						v.ReadBWInfo.AudioDatainBytes, v.ReadBWInfo.AudioSpeedInBytesperMS}
 					msgs.Publishers = append(msgs.Publishers, msg)
 				}
@@ -121,7 +132,7 @@ func (server *Server) GetLiveStatics(w http.ResponseWriter, req *http.Request) {
 					switch pw.GetWriter().(type) {
 					case *rtmp.VirWriter:
 						v := pw.GetWriter().(*rtmp.VirWriter)
-						msg := stream{item.Key, v.Info().URL, v.WriteBWInfo.StreamId, v.WriteBWInfo.VideoDatainBytes, v.WriteBWInfo.VideoSpeedInBytesperMS,
+						msg := stream{item.Key, v.Info().URL, v.WriteBWInfo.StreamID, v.WriteBWInfo.VideoDatainBytes, v.WriteBWInfo.VideoSpeedInBytesperMS,
 							v.WriteBWInfo.AudioDatainBytes, v.WriteBWInfo.AudioSpeedInBytesperMS}
 						msgs.Players = append(msgs.Players, msg)
 					}

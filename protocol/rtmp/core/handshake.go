@@ -10,7 +10,7 @@ import (
 
 	"time"
 
-	"github.com/gwuhaolin/livego/utils/pio"
+	"github.com/jslyzt/livego/utils/pio"
 )
 
 var (
@@ -97,6 +97,7 @@ func hsCreate2(p []byte, key []byte) {
 	copy(p[gap:], digest)
 }
 
+// HandshakeClient 握手客户端
 func (conn *Conn) HandshakeClient() (err error) {
 	var random [(1 + 1536*2) * 2]byte
 
@@ -124,7 +125,7 @@ func (conn *Conn) HandshakeClient() (err error) {
 		return
 	}
 
-	S1 := S0S1S2[1: 1536+1]
+	S1 := S0S1S2[1 : 1536+1]
 	if ver := pio.U32BE(S1[4:8]); ver != 0 {
 		C2 = S1
 	} else {
@@ -140,18 +141,19 @@ func (conn *Conn) HandshakeClient() (err error) {
 	return
 }
 
+// HandshakeServer 握手服务器
 func (conn *Conn) HandshakeServer() (err error) {
 	var random [(1 + 1536*2) * 2]byte
 
 	C0C1C2 := random[:1536*2+1]
 	C0 := C0C1C2[:1]
-	C1 := C0C1C2[1: 1536+1]
+	C1 := C0C1C2[1 : 1536+1]
 	C0C1 := C0C1C2[:1536+1]
 	C2 := C0C1C2[1536+1:]
 
 	S0S1S2 := random[1536*2+1:]
 	S0 := S0S1S2[:1]
-	S1 := S0S1S2[1: 1536+1]
+	S1 := S0S1S2[1 : 1536+1]
 	S0S1 := S0S1S2[:1536+1]
 	S2 := S0S1S2[1536+1:]
 

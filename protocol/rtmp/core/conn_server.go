@@ -5,9 +5,10 @@ import (
 	"errors"
 	"io"
 
-	"github.com/gwuhaolin/livego/protocol/amf"
-	"github.com/gwuhaolin/livego/av"
 	"log"
+
+	"github.com/jslyzt/livego/av"
+	"github.com/jslyzt/livego/protocol/amf"
 )
 
 var (
@@ -16,6 +17,7 @@ var (
 	publishAppend = "append"
 )
 
+// 错误定义
 var (
 	ErrReq = errors.New("req error")
 )
@@ -31,24 +33,27 @@ var (
 	cmdPlay          = "play"
 )
 
+// ConnectInfo 连接信息
 type ConnectInfo struct {
 	App            string `amf:"app" json:"app"`
 	Flashver       string `amf:"flashVer" json:"flashVer"`
-	SwfUrl         string `amf:"swfUrl" json:"swfUrl"`
-	TcUrl          string `amf:"tcUrl" json:"tcUrl"`
+	SwfURL         string `amf:"swfUrl" json:"swfUrl"`
+	TcURL          string `amf:"tcUrl" json:"tcUrl"`
 	Fpad           bool   `amf:"fpad" json:"fpad"`
 	AudioCodecs    int    `amf:"audioCodecs" json:"audioCodecs"`
 	VideoCodecs    int    `amf:"videoCodecs" json:"videoCodecs"`
 	VideoFunction  int    `amf:"videoFunction" json:"videoFunction"`
-	PageUrl        string `amf:"pageUrl" json:"pageUrl"`
+	PageURL        string `amf:"pageUrl" json:"pageUrl"`
 	ObjectEncoding int    `amf:"objectEncoding" json:"objectEncoding"`
 }
 
+// ConnectResp 连接返回
 type ConnectResp struct {
 	FMSVer       string `amf:"fmsVer"`
 	Capabilities int    `amf:"capabilities"`
 }
 
+// ConnectEvent 连接事件
 type ConnectEvent struct {
 	Level          string `amf:"level"`
 	Code           string `amf:"code"`
@@ -56,11 +61,13 @@ type ConnectEvent struct {
 	ObjectEncoding int    `amf:"objectEncoding"`
 }
 
+// PublishInfo 发布信息
 type PublishInfo struct {
 	Name string
 	Type string
 }
 
+// ConnServer 连接服务
 type ConnServer struct {
 	done          bool
 	streamID      int
@@ -74,6 +81,7 @@ type ConnServer struct {
 	bytesw        *bytes.Buffer
 }
 
+// NewConnServer 创建连接服务
 func NewConnServer(conn *Conn) *ConnServer {
 	return &ConnServer{
 		conn:     conn,
@@ -124,7 +132,7 @@ func (connServer *ConnServer) connect(vs []interface{}) error {
 				connServer.ConnInfo.Flashver = flashVer.(string)
 			}
 			if tcurl, ok := obimap["tcUrl"]; ok {
-				connServer.ConnInfo.TcUrl = tcurl.(string)
+				connServer.ConnInfo.TcURL = tcurl.(string)
 			}
 			if encoding, ok := obimap["objectEncoding"]; ok {
 				connServer.ConnInfo.ObjectEncoding = int(encoding.(float64))
@@ -302,6 +310,7 @@ func (connServer *ConnServer) handleCmdMsg(c *ChunkStream) error {
 	return nil
 }
 
+// ReadMsg 读取消息
 func (connServer *ConnServer) ReadMsg() error {
 	var c ChunkStream
 	for {
@@ -321,13 +330,15 @@ func (connServer *ConnServer) ReadMsg() error {
 	return nil
 }
 
+// IsPublisher 是否发布者
 func (connServer *ConnServer) IsPublisher() bool {
 	return connServer.isPublisher
 }
 
+// Write 写
 func (connServer *ConnServer) Write(c ChunkStream) error {
-	if c.TypeID == av.TAG_SCRIPTDATAAMF0 ||
-		c.TypeID == av.TAG_SCRIPTDATAAMF3 {
+	if c.TypeID == av.TagScriptDataAmF0 ||
+		c.TypeID == av.TagScriptDataAmF3 {
 		var err error
 		if c.Data, err = amf.MetaDataReform(c.Data, amf.DEL); err != nil {
 			return err
@@ -337,21 +348,25 @@ func (connServer *ConnServer) Write(c ChunkStream) error {
 	return connServer.conn.Write(&c)
 }
 
+// Flush flush
 func (connServer *ConnServer) Flush() error {
 	return connServer.conn.Flush()
 }
 
+// Read 读
 func (connServer *ConnServer) Read(c *ChunkStream) (err error) {
 	return connServer.conn.Read(c)
 }
 
+// GetInfo 获取信息
 func (connServer *ConnServer) GetInfo() (app string, name string, url string) {
 	app = connServer.ConnInfo.App
 	name = connServer.PublishInfo.Name
-	url = connServer.ConnInfo.TcUrl + "/" + connServer.PublishInfo.Name
+	url = connServer.ConnInfo.TcURL + "/" + connServer.PublishInfo.Name
 	return
 }
 
+// Close 关闭
 func (connServer *ConnServer) Close(err error) {
 	connServer.conn.Close()
 }

@@ -1,22 +1,29 @@
 package flv
 
 import (
+	"flag"
+	"log"
+	"os"
 	"strings"
 	"time"
-	"flag"
-	"os"
-	"log"
-	"github.com/gwuhaolin/livego/utils/uid"
-	"github.com/gwuhaolin/livego/protocol/amf"
-	"github.com/gwuhaolin/livego/av"
-	"github.com/gwuhaolin/livego/utils/pio"
+
+	"github.com/jslyzt/livego/av"
+	"github.com/jslyzt/livego/protocol/amf"
+	"github.com/jslyzt/livego/utils/pio"
+	"github.com/jslyzt/livego/utils/uid"
 )
 
+// 变量定义
 var (
 	flvHeader = []byte{0x46, 0x4c, 0x56, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09}
 	flvFile   = flag.String("filFile", "./out.flv", "output flv file name")
 )
 
+const (
+	headerLen = 11
+)
+
+// NewFlv 创建flv
 func NewFlv(handler av.Handler, info av.Info) {
 	patths := strings.SplitN(info.Key, "/", 2)
 
@@ -40,12 +47,9 @@ func NewFlv(handler av.Handler, info av.Info) {
 	writer.ctx.Close()
 }
 
-const (
-	headerLen = 11
-)
-
-type FLVWriter struct {
-	Uid             string
+// Writer flv写入
+type Writer struct {
+	UID string
 	av.RWBaser
 	app, title, url string
 	buf             []byte
@@ -53,9 +57,10 @@ type FLVWriter struct {
 	ctx             *os.File
 }
 
-func NewFLVWriter(app, title, url string, ctx *os.File) *FLVWriter {
-	ret := &FLVWriter{
-		Uid:     uid.NewId(),
+// NewFLVWriter 新建flv写入
+func NewFLVWriter(app, title, url string, ctx *os.File) *Writer {
+	ret := &Writer{
+		UID:     uid.NewID(),
 		app:     app,
 		title:   title,
 		url:     url,
@@ -72,22 +77,24 @@ func NewFLVWriter(app, title, url string, ctx *os.File) *FLVWriter {
 	return ret
 }
 
-func (writer *FLVWriter) Write(p *av.Packet) error {
+// Write 写入接口
+func (writer *Writer) Write(p *av.Packet) error {
 	writer.RWBaser.SetPreTime()
 	h := writer.buf[:headerLen]
-	typeID := av.TAG_VIDEO
+	typeID := av.TagVideo
 	if !p.IsVideo {
 		if p.IsMetadata {
 			var err error
-			typeID = av.TAG_SCRIPTDATAAMF0
+			typeID = av.TagScriptDataAmF0
 			p.Data, err = amf.MetaDataReform(p.Data, amf.DEL)
 			if err != nil {
 				return err
 			}
 		} else {
-			typeID = av.TAG_AUDIO
+			typeID = av.TagAudio
 		}
 	}
+
 	dataLen := len(p.Data)
 	timestamp := p.TimeStamp
 	timestamp += writer.BaseTimeStamp()
@@ -118,20 +125,23 @@ func (writer *FLVWriter) Write(p *av.Packet) error {
 	return nil
 }
 
-func (writer *FLVWriter) Wait() {
+// Wait 等待
+func (writer *Writer) Wait() {
 	select {
 	case <-writer.closed:
 		return
 	}
 }
 
-func (writer *FLVWriter) Close(error) {
+// Close 关闭
+func (writer *Writer) Close(error) {
 	writer.ctx.Close()
 	close(writer.closed)
 }
 
-func (writer *FLVWriter) Info() (ret av.Info) {
-	ret.UID = writer.Uid
+// Info 信息
+func (writer *Writer) Info() (ret av.Info) {
+	ret.UID = writer.UID
 	ret.URL = writer.url
 	ret.Key = writer.app + "/" + writer.title
 	return

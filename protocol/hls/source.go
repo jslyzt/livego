@@ -1,15 +1,16 @@
 package hls
 
 import (
-	"fmt"
-	"time"
 	"bytes"
-	"log"
 	"errors"
-	"github.com/gwuhaolin/livego/parser"
-	"github.com/gwuhaolin/livego/av"
-	"github.com/gwuhaolin/livego/container/flv"
-	"github.com/gwuhaolin/livego/container/ts"
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/jslyzt/livego/av"
+	"github.com/jslyzt/livego/container/flv"
+	"github.com/jslyzt/livego/container/ts"
+	"github.com/jslyzt/livego/parser"
 )
 
 const (
@@ -17,9 +18,10 @@ const (
 	aacSampleLen = 1024
 	maxQueueNum  = 512
 
-	h264_default_hz uint64 = 90
+	h264DefaultHZ uint64 = 90
 )
 
+// Source 来源
 type Source struct {
 	av.RWBaser
 	seq         int
@@ -38,6 +40,7 @@ type Source struct {
 	packetQueue chan *av.Packet
 }
 
+// NewSource 新来源
 func NewSource(info av.Info) *Source {
 	info.Inter = true
 	s := &Source{
@@ -63,10 +66,12 @@ func NewSource(info av.Info) *Source {
 	return s
 }
 
+// GetCacheInc 获取缓存
 func (source *Source) GetCacheInc() *TSCacheItem {
 	return source.tsCache
 }
 
+// DropPacket 包处理
 func (source *Source) DropPacket(pktQue chan *av.Packet, info av.Info) {
 	log.Printf("[%v] packet queue max!!!", info)
 	for i := 0; i < maxQueueNum-84; i++ {
@@ -95,6 +100,7 @@ func (source *Source) DropPacket(pktQue chan *av.Packet, info av.Info) {
 	log.Println("packet queue len: ", len(pktQue))
 }
 
+// Write 写入
 func (source *Source) Write(p *av.Packet) (err error) {
 	err = nil
 	if source.closed {
@@ -118,6 +124,7 @@ func (source *Source) Write(p *av.Packet) (err error) {
 	return
 }
 
+// SendPacket 发包
 func (source *Source) SendPacket() error {
 	defer func() {
 		log.Printf("[%v] hls sender stop", source.info)
@@ -166,6 +173,7 @@ func (source *Source) SendPacket() error {
 	}
 }
 
+// Info 信息
 func (source *Source) Info() (ret av.Info) {
 	return source.info
 }
@@ -178,6 +186,7 @@ func (source *Source) cleanup() {
 	source.tsCache = nil
 }
 
+// Close 关闭
 func (source *Source) Close(err error) {
 	log.Println("hls source closed: ", source.info)
 	if !source.closed {
@@ -205,7 +214,7 @@ func (source *Source) cut() {
 	}
 	if newf {
 		source.btswriter.Write(source.muxer.PAT())
-		source.btswriter.Write(source.muxer.PMT(av.SOUND_AAC, true))
+		source.btswriter.Write(source.muxer.PMT(av.SoundAac, true))
 	}
 }
 
@@ -215,7 +224,7 @@ func (source *Source) parse(p *av.Packet) (int32, bool, error) {
 	var vh av.VideoPacketHeader
 	if p.IsVideo {
 		vh = p.Header.(av.VideoPacketHeader)
-		if vh.CodecID() != av.VIDEO_H264 {
+		if vh.CodecID() != av.VideoH264 {
 			return compositionTime, false, ErrNoSupportVideoCodec
 		}
 		compositionTime = vh.CompositionTime()
@@ -224,10 +233,10 @@ func (source *Source) parse(p *av.Packet) (int32, bool, error) {
 		}
 	} else {
 		ah = p.Header.(av.AudioPacketHeader)
-		if ah.SoundFormat() != av.SOUND_AAC {
+		if ah.SoundFormat() != av.SoundAac {
 			return compositionTime, false, ErrNoSupportAudioCodec
 		}
-		if ah.AACPacketType() == av.AAC_SEQHDR {
+		if ah.AACPacketType() == av.AacSeqhdr {
 			return compositionTime, true, source.tsparser.Parse(p, source.bwriter)
 		}
 	}
@@ -244,15 +253,16 @@ func (source *Source) parse(p *av.Packet) (int32, bool, error) {
 }
 
 func (source *Source) calcPtsDts(isVideo bool, ts, compositionTs uint32) {
-	source.dts = uint64(ts) * h264_default_hz
+	source.dts = uint64(ts) * h264DefaultHZ
 	if isVideo {
-		source.pts = source.dts + uint64(compositionTs)*h264_default_hz
+		source.pts = source.dts + uint64(compositionTs)*h264DefaultHZ
 	} else {
 		sampleRate, _ := source.tsparser.SampleRate()
 		source.align.align(&source.dts, uint32(videoHZ*aacSampleLen/sampleRate))
 		source.pts = source.dts
 	}
 }
+
 func (source *Source) flushAudio() error {
 	return source.muxAudio(1)
 }
@@ -264,15 +274,14 @@ func (source *Source) muxAudio(limit byte) error {
 	var p av.Packet
 	_, pts, buf := source.cache.GetFrame()
 	p.Data = buf
-	p.TimeStamp = uint32(pts / h264_default_hz)
+	p.TimeStamp = uint32(pts / h264DefaultHZ)
 	return source.muxer.Mux(&p, source.btswriter)
 }
 
 func (source *Source) tsMux(p *av.Packet) error {
 	if p.IsVideo {
 		return source.muxer.Mux(p, source.btswriter)
-	} else {
-		source.cache.Cache(p.Data, source.pts)
-		return source.muxAudio(cache_max_frames)
 	}
+	source.cache.Cache(p.Data, source.pts)
+	return source.muxAudio(cacheMaxFrames)
 }

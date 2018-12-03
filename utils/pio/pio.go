@@ -1,3 +1,6 @@
 package pio
 
-var RecommendBufioSize = 1024 * 64
+// 变量
+var (
+	RecommendBufioSize = 1024 * 64
+)

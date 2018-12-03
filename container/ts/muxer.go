@@ -2,9 +2,11 @@ package ts
 
 import (
 	"io"
-	"github.com/gwuhaolin/livego/av"
+
+	"github.com/jslyzt/livego/av"
 )
 
+// 常量定义
 const (
 	tsDefaultDataLen = 184
 	tsPacketLen      = 188
@@ -16,6 +18,7 @@ const (
 	audioSID = 0xc0
 )
 
+// Muxer 复用器
 type Muxer struct {
 	videoCc  byte
 	audioCc  byte
@@ -26,10 +29,12 @@ type Muxer struct {
 	tsPacket [tsPacketLen]byte
 }
 
+// NewMuxer 新复用器
 func NewMuxer() *Muxer {
 	return &Muxer{}
 }
 
+// Mux 复用
 func (muxer *Muxer) Mux(p *av.Packet, w io.Writer) error {
 	first := true
 	wBytes := 0
@@ -157,7 +162,7 @@ func (muxer *Muxer) Mux(p *av.Packet, w io.Writer) error {
 	return nil
 }
 
-//PAT return pat data
+// PAT return pat data
 func (muxer *Muxer) PAT() []byte {
 	i := 0
 	remainByte := 0
@@ -207,7 +212,7 @@ func (muxer *Muxer) PMT(soundFormat byte, hasVideo bool) []byte {
 		progInfo = []byte{0x0f, 0xe1, 0x01, 0xf0, 0x00}
 	} else {
 		progInfo = []byte{0x1b, 0xe1, 0x00, 0xf0, 0x00, //h264 or h265*
-				  0x0f, 0xe1, 0x01, 0xf0, 0x00, //mp3 or aac
+			0x0f, 0xe1, 0x01, 0xf0, 0x00, //mp3 or aac
 		}
 	}
 	pmtHeader[2] = byte(len(progInfo) + 9 + 4)
@@ -236,7 +241,7 @@ func (muxer *Muxer) PMT(soundFormat byte, hasVideo bool) []byte {
 	copy(muxer.pmt[i:], progInfo[0:])
 	i += len(progInfo)
 
-	crc32Value := GenCrc32(muxer.pmt[5: 5+len(pmtHeader)+len(progInfo)])
+	crc32Value := GenCrc32(muxer.pmt[5 : 5+len(pmtHeader)+len(progInfo)])
 	muxer.pmt[i] = byte(crc32Value >> 24)
 	i++
 	muxer.pmt[i] = byte(crc32Value >> 16)

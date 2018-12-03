@@ -4,10 +4,11 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/gwuhaolin/livego/av"
-	"github.com/gwuhaolin/livego/utils/pool"
+	"github.com/jslyzt/livego/av"
+	"github.com/jslyzt/livego/utils/pool"
 )
 
+// ChunkStream 大块文件流
 type ChunkStream struct {
 	Format    uint32
 	CSID      uint32
@@ -73,7 +74,7 @@ func (chunkStream *ChunkStream) writeHeader(w *ReadWriter) error {
 	}
 	w.WriteUintLE(chunkStream.StreamID, 4)
 END:
-//Extended Timestamp
+	//Extended Timestamp
 	if ts >= 0xffffff {
 		w.WriteUintBE(chunkStream.Timestamp, 4)
 	}
@@ -81,11 +82,11 @@ END:
 }
 
 func (chunkStream *ChunkStream) writeChunk(w *ReadWriter, chunkSize int) error {
-	if chunkStream.TypeID == av.TAG_AUDIO {
+	if chunkStream.TypeID == av.TagAudio {
 		chunkStream.CSID = 4
-	} else if chunkStream.TypeID == av.TAG_VIDEO ||
-		chunkStream.TypeID == av.TAG_SCRIPTDATAAMF0 ||
-		chunkStream.TypeID == av.TAG_SCRIPTDATAAMF3 {
+	} else if chunkStream.TypeID == av.TagVideo ||
+		chunkStream.TypeID == av.TagScriptDataAmF0 ||
+		chunkStream.TypeID == av.TagScriptDataAmF3 {
 		chunkStream.CSID = 6
 	}
 
@@ -115,9 +116,7 @@ func (chunkStream *ChunkStream) writeChunk(w *ReadWriter, chunkSize int) error {
 			return err
 		}
 	}
-
 	return nil
-
 }
 
 func (chunkStream *ChunkStream) readChunk(r *ReadWriter, chunkSize uint32, pool *pool.Pool) error {
@@ -211,7 +210,7 @@ func (chunkStream *ChunkStream) readChunk(r *ReadWriter, chunkSize uint32, pool 
 		size = int(chunkSize)
 	}
 
-	buf := chunkStream.Data[chunkStream.index: chunkStream.index+uint32(size)]
+	buf := chunkStream.Data[chunkStream.index : chunkStream.index+uint32(size)]
 	if _, err := r.Read(buf); err != nil {
 		return err
 	}

@@ -6,31 +6,23 @@ import (
 	"log"
 )
 
-/*
-{
-	[
-	{
-	"application":"live",
-	"live":"on",
-	"hls":"on",
-	"static_push":["rtmp://xx/live"]
-	}
-	]
-}
-*/
+// Application 应用
 type Application struct {
-	Appname     string
-	Liveon      string
-	Hlson       string
-	Static_push []string
+	Appname    string
+	Liveon     string
+	Hlson      string
+	StaticPush []string
 }
 
+// ServerCfg 服务配置
 type ServerCfg struct {
 	Server []Application
 }
 
+// RtmpServercfg rtmp服务配置
 var RtmpServercfg ServerCfg
 
+// LoadConfig 加载配置
 func LoadConfig(configfilename string) error {
 	log.Printf("starting load configure file(%s)......", configfilename)
 	data, err := ioutil.ReadFile(configfilename)
@@ -50,6 +42,7 @@ func LoadConfig(configfilename string) error {
 	return nil
 }
 
+// CheckAppName 检查app名字
 func CheckAppName(appname string) bool {
 	for _, app := range RtmpServercfg.Server {
 		if (app.Appname == appname) && (app.Liveon == "on") {
@@ -59,14 +52,14 @@ func CheckAppName(appname string) bool {
 	return false
 }
 
-func GetStaticPushUrlList(appname string) ([]string, bool) {
+// GetStaticPushURLList 获取静态推送列表
+func GetStaticPushURLList(appname string) ([]string, bool) {
 	for _, app := range RtmpServercfg.Server {
 		if (app.Appname == appname) && (app.Liveon == "on") {
-			if len(app.Static_push) > 0 {
-				return app.Static_push, true
-			} else {
-				return nil, false
+			if len(app.StaticPush) > 0 {
+				return app.StaticPush, true
 			}
+			return nil, false
 		}
 
 	}

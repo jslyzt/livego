@@ -20,10 +20,10 @@
 - [x] MP3
 
 ## 安装
-直接下载编译好的[二进制文件](https://github.com/gwuhaolin/livego/releases)后，在命令行中执行。
+直接下载编译好的[二进制文件](https://github.com/jslyzt/livego/releases)后，在命令行中执行。
 
 #### 从源码编译
-1. 下载源码 `git clone https://github.com/gwuhaolin/livego.git`
+1. 下载源码 `git clone https://github.com/jslyzt/livego.git`
 2. 去 livego 目录中 执行 `go build`
 
 ## 使用

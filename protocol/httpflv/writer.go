@@ -1,15 +1,16 @@
 package httpflv
 
 import (
-	"time"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"github.com/gwuhaolin/livego/utils/uid"
-	"github.com/gwuhaolin/livego/protocol/amf"
-	"github.com/gwuhaolin/livego/av"
-	"github.com/gwuhaolin/livego/utils/pio"
+	"time"
+
+	"github.com/jslyzt/livego/av"
+	"github.com/jslyzt/livego/protocol/amf"
+	"github.com/jslyzt/livego/utils/pio"
+	"github.com/jslyzt/livego/utils/uid"
 )
 
 const (
@@ -17,8 +18,9 @@ const (
 	maxQueueNum = 1024
 )
 
+// FLVWriter flv写入器
 type FLVWriter struct {
-	Uid string
+	UID string
 	av.RWBaser
 	app, title, url string
 	buf             []byte
@@ -28,9 +30,10 @@ type FLVWriter struct {
 	packetQueue     chan *av.Packet
 }
 
+// NewFLVWriter 新建写入器
 func NewFLVWriter(app, title, url string, ctx http.ResponseWriter) *FLVWriter {
 	ret := &FLVWriter{
-		Uid:         uid.NewId(),
+		UID:         uid.NewID(),
 		app:         app,
 		title:       title,
 		url:         url,
@@ -54,6 +57,7 @@ func NewFLVWriter(app, title, url string, ctx http.ResponseWriter) *FLVWriter {
 	return ret
 }
 
+// DropPacket 处理消息
 func (flvWriter *FLVWriter) DropPacket(pktQue chan *av.Packet, info av.Info) {
 	log.Printf("[%v] packet queue max!!!", info)
 	for i := 0; i < maxQueueNum-84; i++ {
@@ -81,6 +85,7 @@ func (flvWriter *FLVWriter) DropPacket(pktQue chan *av.Packet, info av.Info) {
 	log.Println("packet queue len: ", len(pktQue))
 }
 
+// Write 写入
 func (flvWriter *FLVWriter) Write(p *av.Packet) (err error) {
 	err = nil
 	if flvWriter.closed {
@@ -98,27 +103,27 @@ func (flvWriter *FLVWriter) Write(p *av.Packet) (err error) {
 	} else {
 		flvWriter.packetQueue <- p
 	}
-
 	return
 }
 
+// SendPacket 发送数据包
 func (flvWriter *FLVWriter) SendPacket() error {
 	for {
 		p, ok := <-flvWriter.packetQueue
 		if ok {
 			flvWriter.RWBaser.SetPreTime()
 			h := flvWriter.buf[:headerLen]
-			typeID := av.TAG_VIDEO
+			typeID := av.TagVideo
 			if !p.IsVideo {
 				if p.IsMetadata {
 					var err error
-					typeID = av.TAG_SCRIPTDATAAMF0
+					typeID = av.TagScriptDataAmF0
 					p.Data, err = amf.MetaDataReform(p.Data, amf.DEL)
 					if err != nil {
 						return err
 					}
 				} else {
-					typeID = av.TAG_AUDIO
+					typeID = av.TagAudio
 				}
 			}
 			dataLen := len(p.Data)
@@ -150,12 +155,10 @@ func (flvWriter *FLVWriter) SendPacket() error {
 		} else {
 			return errors.New("closed")
 		}
-
 	}
-
-	return nil
 }
 
+// Wait 等待
 func (flvWriter *FLVWriter) Wait() {
 	select {
 	case <-flvWriter.closedChan:
@@ -163,6 +166,7 @@ func (flvWriter *FLVWriter) Wait() {
 	}
 }
 
+// Close 关闭
 func (flvWriter *FLVWriter) Close(error) {
 	log.Println("http flv closed")
 	if !flvWriter.closed {
@@ -172,8 +176,9 @@ func (flvWriter *FLVWriter) Close(error) {
 	flvWriter.closed = true
 }
 
+// Info 信息
 func (flvWriter *FLVWriter) Info() (ret av.Info) {
-	ret.UID = flvWriter.Uid
+	ret.UID = flvWriter.UID
 	ret.URL = flvWriter.url
 	ret.Key = flvWriter.app + "/" + flvWriter.title
 	ret.Inter = true

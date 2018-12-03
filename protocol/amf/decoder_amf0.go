@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-// amf0 polymorphic router
+// DecodeAmf0 amf0 polymorphic router
 func (d *Decoder) DecodeAmf0(r io.Reader) (interface{}, error) {
 	marker, err := ReadMarker(r)
 	if err != nil {
@@ -13,49 +13,49 @@ func (d *Decoder) DecodeAmf0(r io.Reader) (interface{}, error) {
 	}
 
 	switch marker {
-	case AMF0_NUMBER_MARKER:
+	case Amf0NumberMarker:
 		return d.DecodeAmf0Number(r, false)
-	case AMF0_BOOLEAN_MARKER:
+	case Amf0BooleanMarker:
 		return d.DecodeAmf0Boolean(r, false)
-	case AMF0_STRING_MARKER:
+	case Amf0StringMarker:
 		return d.DecodeAmf0String(r, false)
-	case AMF0_OBJECT_MARKER:
+	case Amf0ObjectMarker:
 		return d.DecodeAmf0Object(r, false)
-	case AMF0_MOVIECLIP_MARKER:
+	case Amf0MovieclipMarker:
 		return nil, Error("decode amf0: unsupported type movieclip")
-	case AMF0_NULL_MARKER:
+	case Amf0NullMarker:
 		return d.DecodeAmf0Null(r, false)
-	case AMF0_UNDEFINED_MARKER:
+	case Amf0UndefinedMarker:
 		return d.DecodeAmf0Undefined(r, false)
-	case AMF0_REFERENCE_MARKER:
+	case Amf0ReferenceMarker:
 		return nil, Error("decode amf0: unsupported type reference")
-	case AMF0_ECMA_ARRAY_MARKER:
+	case Amf0EcmaArrayMarker:
 		return d.DecodeAmf0EcmaArray(r, false)
-	case AMF0_STRICT_ARRAY_MARKER:
+	case Amf0StrictArrayMarker:
 		return d.DecodeAmf0StrictArray(r, false)
-	case AMF0_DATE_MARKER:
+	case Amf0DateMarker:
 		return d.DecodeAmf0Date(r, false)
-	case AMF0_LONG_STRING_MARKER:
+	case Amf0LongStringMarker:
 		return d.DecodeAmf0LongString(r, false)
-	case AMF0_UNSUPPORTED_MARKER:
+	case Amf0UnsupportedMarker:
 		return d.DecodeAmf0Unsupported(r, false)
-	case AMF0_RECORDSET_MARKER:
+	case Amf0RecordsetMarker:
 		return nil, Error("decode amf0: unsupported type recordset")
-	case AMF0_XML_DOCUMENT_MARKER:
+	case Amf0XmlDocumentMarker:
 		return d.DecodeAmf0XmlDocument(r, false)
-	case AMF0_TYPED_OBJECT_MARKER:
+	case Amf0TypedObjectMarker:
 		return d.DecodeAmf0TypedObject(r, false)
-	case AMF0_ACMPLUS_OBJECT_MARKER:
+	case Amf0AcmplusObjectMarker:
 		return d.DecodeAmf3(r)
 	}
 
 	return nil, Error("decode amf0: unsupported type %d", marker)
 }
 
-// marker: 1 byte 0x00
+// DecodeAmf0Number marker: 1 byte 0x00
 // format: 8 byte big endian float64
 func (d *Decoder) DecodeAmf0Number(r io.Reader, decodeMarker bool) (result float64, err error) {
-	if err = AssertMarker(r, decodeMarker, AMF0_NUMBER_MARKER); err != nil {
+	if err = AssertMarker(r, decodeMarker, Amf0NumberMarker); err != nil {
 		return
 	}
 
@@ -67,10 +67,10 @@ func (d *Decoder) DecodeAmf0Number(r io.Reader, decodeMarker bool) (result float
 	return
 }
 
-// marker: 1 byte 0x01
+// DecodeAmf0Boolean marker: 1 byte 0x01
 // format: 1 byte, 0x00 = false, 0x01 = true
 func (d *Decoder) DecodeAmf0Boolean(r io.Reader, decodeMarker bool) (result bool, err error) {
-	if err = AssertMarker(r, decodeMarker, AMF0_BOOLEAN_MARKER); err != nil {
+	if err = AssertMarker(r, decodeMarker, Amf0BooleanMarker); err != nil {
 		return
 	}
 
@@ -79,21 +79,21 @@ func (d *Decoder) DecodeAmf0Boolean(r io.Reader, decodeMarker bool) (result bool
 		return
 	}
 
-	if b == AMF0_BOOLEAN_FALSE {
+	if b == Amf0BooleanFalse {
 		return false, nil
-	} else if b == AMF0_BOOLEAN_TRUE {
+	} else if b == Amf0BooleanTrue {
 		return true, nil
 	}
 
 	return false, Error("decode amf0: unexpected value %v for boolean", b)
 }
 
-// marker: 1 byte 0x02
+// DecodeAmf0String marker: 1 byte 0x02
 // format:
 // - 2 byte big endian uint16 header to determine size
 // - n (size) byte utf8 string
 func (d *Decoder) DecodeAmf0String(r io.Reader, decodeMarker bool) (result string, err error) {
-	if err = AssertMarker(r, decodeMarker, AMF0_STRING_MARKER); err != nil {
+	if err = AssertMarker(r, decodeMarker, Amf0StringMarker); err != nil {
 		return
 	}
 
@@ -111,12 +111,12 @@ func (d *Decoder) DecodeAmf0String(r io.Reader, decodeMarker bool) (result strin
 	return string(bytes), nil
 }
 
-// marker: 1 byte 0x03
+// DecodeAmf0Object marker: 1 byte 0x03
 // format:
 // - loop encoded string followed by encoded value
 // - terminated with empty string followed by 1 byte 0x09
 func (d *Decoder) DecodeAmf0Object(r io.Reader, decodeMarker bool) (Object, error) {
-	if err := AssertMarker(r, decodeMarker, AMF0_OBJECT_MARKER); err != nil {
+	if err := AssertMarker(r, decodeMarker, Amf0ObjectMarker); err != nil {
 		return nil, err
 	}
 
@@ -130,7 +130,7 @@ func (d *Decoder) DecodeAmf0Object(r io.Reader, decodeMarker bool) (Object, erro
 		}
 
 		if key == "" {
-			if err = AssertMarker(r, true, AMF0_OBJECT_END_MARKER); err != nil {
+			if err = AssertMarker(r, true, Amf0ObjectEndMarker); err != nil {
 				return nil, Error("decode amf0: expected object end marker: %s", err)
 			}
 
@@ -149,25 +149,24 @@ func (d *Decoder) DecodeAmf0Object(r io.Reader, decodeMarker bool) (Object, erro
 
 }
 
-// marker: 1 byte 0x05
+// DecodeAmf0Null marker: 1 byte 0x05
 // no additional data
 func (d *Decoder) DecodeAmf0Null(r io.Reader, decodeMarker bool) (result interface{}, err error) {
-	err = AssertMarker(r, decodeMarker, AMF0_NULL_MARKER)
+	err = AssertMarker(r, decodeMarker, Amf0NullMarker)
 	return
 }
 
-// marker: 1 byte 0x06
+// DecodeAmf0Undefined marker: 1 byte 0x06
 // no additional data
 func (d *Decoder) DecodeAmf0Undefined(r io.Reader, decodeMarker bool) (result interface{}, err error) {
-	err = AssertMarker(r, decodeMarker, AMF0_UNDEFINED_MARKER)
+	err = AssertMarker(r, decodeMarker, Amf0UndefinedMarker)
 	return
 }
 
-// marker: 1 byte 0x07
+// DecodeAmf0Reference marker: 1 byte 0x07
 // format: 2 byte big endian uint16
-/*
 func (d *Decoder) DecodeAmf0Reference(r io.Reader, decodeMarker bool) (interface{}, error) {
-	if err := AssertMarker(r, decodeMarker, AMF0_REFERENCE_MARKER); err != nil {
+	if err := AssertMarker(r, decodeMarker, Amf0ReferenceMarker); err != nil {
 		return nil, err
 	}
 
@@ -187,16 +186,15 @@ func (d *Decoder) DecodeAmf0Reference(r io.Reader, decodeMarker bool) (interface
 
 	return result, nil
 }
-*/
 
-// marker: 1 byte 0x08
+// DecodeAmf0EcmaArray marker: 1 byte 0x08
 // format:
 // - 4 byte big endian uint32 with length of associative array
 // - normal object format:
 //   - loop encoded string followed by encoded value
 //   - terminated with empty string followed by 1 byte 0x09
 func (d *Decoder) DecodeAmf0EcmaArray(r io.Reader, decodeMarker bool) (Object, error) {
-	if err := AssertMarker(r, decodeMarker, AMF0_ECMA_ARRAY_MARKER); err != nil {
+	if err := AssertMarker(r, decodeMarker, Amf0EcmaArrayMarker); err != nil {
 		return nil, err
 	}
 
@@ -211,12 +209,12 @@ func (d *Decoder) DecodeAmf0EcmaArray(r io.Reader, decodeMarker bool) (Object, e
 	return result, nil
 }
 
-// marker: 1 byte 0x0a
+// DecodeAmf0StrictArray marker: 1 byte 0x0a
 // format:
 // - 4 byte big endian uint32 to determine length of associative array
 // - n (length) encoded values
 func (d *Decoder) DecodeAmf0StrictArray(r io.Reader, decodeMarker bool) (result Array, err error) {
-	if err := AssertMarker(r, decodeMarker, AMF0_STRICT_ARRAY_MARKER); err != nil {
+	if err := AssertMarker(r, decodeMarker, Amf0StrictArrayMarker); err != nil {
 		return nil, err
 	}
 
@@ -239,13 +237,13 @@ func (d *Decoder) DecodeAmf0StrictArray(r io.Reader, decodeMarker bool) (result 
 	return result, nil
 }
 
-// marker: 1 byte 0x0b
+// DecodeAmf0Date marker: 1 byte 0x0b
 // format:
 // - normal number format:
 //   - 8 byte big endian float64
 // - 2 byte unused
 func (d *Decoder) DecodeAmf0Date(r io.Reader, decodeMarker bool) (result float64, err error) {
-	if err = AssertMarker(r, decodeMarker, AMF0_DATE_MARKER); err != nil {
+	if err = AssertMarker(r, decodeMarker, Amf0DateMarker); err != nil {
 		return
 	}
 
@@ -260,12 +258,12 @@ func (d *Decoder) DecodeAmf0Date(r io.Reader, decodeMarker bool) (result float64
 	return
 }
 
-// marker: 1 byte 0x0c
+// DecodeAmf0LongString marker: 1 byte 0x0c
 // format:
 // - 4 byte big endian uint32 header to determine size
 // - n (size) byte utf8 string
 func (d *Decoder) DecodeAmf0LongString(r io.Reader, decodeMarker bool) (result string, err error) {
-	if err = AssertMarker(r, decodeMarker, AMF0_LONG_STRING_MARKER); err != nil {
+	if err = AssertMarker(r, decodeMarker, Amf0LongStringMarker); err != nil {
 		return
 	}
 
@@ -283,27 +281,27 @@ func (d *Decoder) DecodeAmf0LongString(r io.Reader, decodeMarker bool) (result s
 	return string(bytes), nil
 }
 
-// marker: 1 byte 0x0d
+// DecodeAmf0Unsupported marker: 1 byte 0x0d
 // no additional data
 func (d *Decoder) DecodeAmf0Unsupported(r io.Reader, decodeMarker bool) (result interface{}, err error) {
-	err = AssertMarker(r, decodeMarker, AMF0_UNSUPPORTED_MARKER)
+	err = AssertMarker(r, decodeMarker, Amf0UnsupportedMarker)
 	return
 }
 
-// marker: 1 byte 0x0f
+// DecodeAmf0XmlDocument marker: 1 byte 0x0f
 // format:
 // - normal long string format
 //   - 4 byte big endian uint32 header to determine size
 //   - n (size) byte utf8 string
 func (d *Decoder) DecodeAmf0XmlDocument(r io.Reader, decodeMarker bool) (result string, err error) {
-	if err = AssertMarker(r, decodeMarker, AMF0_XML_DOCUMENT_MARKER); err != nil {
+	if err = AssertMarker(r, decodeMarker, Amf0XmlDocumentMarker); err != nil {
 		return
 	}
 
 	return d.DecodeAmf0LongString(r, false)
 }
 
-// marker: 1 byte 0x10
+// DecodeAmf0TypedObject marker: 1 byte 0x10
 // format:
 // - normal string format:
 //   - 2 byte big endian uint16 header to determine size
@@ -314,7 +312,7 @@ func (d *Decoder) DecodeAmf0XmlDocument(r io.Reader, decodeMarker bool) (result 
 func (d *Decoder) DecodeAmf0TypedObject(r io.Reader, decodeMarker bool) (TypedObject, error) {
 	result := *new(TypedObject)
 
-	err := AssertMarker(r, decodeMarker, AMF0_TYPED_OBJECT_MARKER)
+	err := AssertMarker(r, decodeMarker, Amf0TypedObjectMarker)
 	if err != nil {
 		return result, err
 	}

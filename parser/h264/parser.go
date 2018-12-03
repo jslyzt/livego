@@ -6,26 +6,27 @@ import (
 	"io"
 )
 
+// frame定义
 const (
-	i_frame byte = 0
-	p_frame byte = 1
-	b_frame byte = 2
+	iFrame byte = 0
+	pFrame byte = 1
+	bFrame byte = 2
 )
 
 const (
-	nalu_type_not_define byte = 0
-	nalu_type_slice      byte = 1  //slice_layer_without_partioning_rbsp() sliceheader
-	nalu_type_dpa        byte = 2  // slice_data_partition_a_layer_rbsp( ), slice_header
-	nalu_type_dpb        byte = 3  // slice_data_partition_b_layer_rbsp( )
-	nalu_type_dpc        byte = 4  // slice_data_partition_c_layer_rbsp( )
-	nalu_type_idr        byte = 5  // slice_layer_without_partitioning_rbsp( ),sliceheader
-	nalu_type_sei        byte = 6  //sei_rbsp( )
-	nalu_type_sps        byte = 7  //seq_parameter_set_rbsp( )
-	nalu_type_pps        byte = 8  //pic_parameter_set_rbsp( )
-	nalu_type_aud        byte = 9  // access_unit_delimiter_rbsp( )
-	nalu_type_eoesq      byte = 10 //end_of_seq_rbsp( )
-	nalu_type_eostream   byte = 11 //end_of_stream_rbsp( )
-	nalu_type_filler     byte = 12 //filler_data_rbsp( )
+	naluTypeNotDefine byte = 0
+	naluTypeSlice     byte = 1  //slice_layer_without_partioning_rbsp() sliceheader
+	naluTypeDpa       byte = 2  // slice_data_partition_a_layer_rbsp( ), slice_header
+	naluTypeDpb       byte = 3  // slice_data_partition_b_layer_rbsp( )
+	naluTypeDpc       byte = 4  // slice_data_partition_c_layer_rbsp( )
+	naluTypeIdr       byte = 5  // slice_layer_without_partitioning_rbsp( ),sliceheader
+	naluTypeSei       byte = 6  //sei_rbsp( )
+	naluTypeSps       byte = 7  //seq_parameter_set_rbsp( )
+	naluTypePps       byte = 8  //pic_parameter_set_rbsp( )
+	naluTypeAud       byte = 9  // access_unit_delimiter_rbsp( )
+	naluTypeEoesq     byte = 10 //end_of_seq_rbsp( )
+	naluTypeEostream  byte = 11 //end_of_stream_rbsp( )
+	naluTypeFiller    byte = 12 //filler_data_rbsp( )
 )
 
 const (
@@ -34,19 +35,20 @@ const (
 )
 
 var (
-	decDataNil        = errors.New("dec buf is nil")
-	spsDataError      = errors.New("sps data error")
-	ppsHeaderError    = errors.New("pps header error")
-	ppsDataError      = errors.New("pps data error")
-	naluHeaderInvalid = errors.New("nalu header invalid")
-	videoDataInvalid  = errors.New("video data not match")
-	dataSizeNotMatch  = errors.New("data size not match")
-	naluBodyLenError  = errors.New("nalu body len error")
+	errDecDataNil        = errors.New("dec buf is nil")
+	errSpsDataError      = errors.New("sps data error")
+	errPpsHeaderError    = errors.New("pps header error")
+	errPpsDataError      = errors.New("pps data error")
+	errNaluHeaderInvalid = errors.New("nalu header invalid")
+	errVideoDataInvalid  = errors.New("video data not match")
+	errDataSizeNotMatch  = errors.New("data size not match")
+	errNaluBodyLenError  = errors.New("nalu body len error")
 )
 
 var startCode = []byte{0x00, 0x00, 0x00, 0x01}
 var naluAud = []byte{0x00, 0x00, 0x00, 0x01, 0x09, 0xf0}
 
+// Parser 解析器
 type Parser struct {
 	frameType    byte
 	specificInfo []byte
@@ -67,6 +69,7 @@ type sequenceHeader struct {
 	ppsLen               int
 }
 
+// NewParser 新解析器
 func NewParser() *Parser {
 	return &Parser{
 		pps: bytes.NewBuffer(make([]byte, maxSpsPpsLen)),
@@ -76,7 +79,7 @@ func NewParser() *Parser {
 //return value 1:sps, value2 :pps
 func (parser *Parser) parseSpecificInfo(src []byte) error {
 	if len(src) < 9 {
-		return decDataNil
+		return errDecDataNil
 	}
 	sps := []byte{}
 	pps := []byte{}
@@ -95,20 +98,20 @@ func (parser *Parser) parseSpecificInfo(src []byte) error {
 	seq.spsLen = int(src[6])<<8 | int(src[7])
 
 	if len(src[8:]) < seq.spsLen || seq.spsLen <= 0 {
-		return spsDataError
+		return errSpsDataError
 	}
 	sps = append(sps, startCode...)
-	sps = append(sps, src[8:(8 + seq.spsLen)]...)
+	sps = append(sps, src[8:(8+seq.spsLen)]...)
 
 	//get pps
 	tmpBuf := src[(8 + seq.spsLen):]
 	if len(tmpBuf) < 4 {
-		return ppsHeaderError
+		return errPpsHeaderError
 	}
 	seq.ppsNum = tmpBuf[0]
 	seq.ppsLen = int(0)<<16 | int(tmpBuf[1])<<8 | int(tmpBuf[2])
 	if len(tmpBuf[3:]) < seq.ppsLen || seq.ppsLen <= 0 {
-		return ppsDataError
+		return errPpsDataError
 	}
 
 	pps = append(pps, startCode...)
@@ -145,7 +148,7 @@ func (parser *Parser) naluSize(src []byte) (int, error) {
 func (parser *Parser) getAnnexbH264(src []byte, w io.Writer) error {
 	dataSize := len(src)
 	if dataSize < naluBytesLen {
-		return videoDataInvalid
+		return errVideoDataInvalid
 	}
 	parser.pps.Reset()
 	_, err := w.Write(naluAud)
@@ -161,15 +164,15 @@ func (parser *Parser) getAnnexbH264(src []byte, w io.Writer) error {
 	for dataSize > 0 {
 		nalLen, err = parser.naluSize(src[index:])
 		if err != nil {
-			return dataSizeNotMatch
+			return errDataSizeNotMatch
 		}
 		index += naluBytesLen
 		dataSize -= naluBytesLen
 		if dataSize >= nalLen && len(src[index:]) >= nalLen && nalLen > 0 {
 			nalType := src[index] & 0x1f
 			switch nalType {
-			case nalu_type_aud:
-			case nalu_type_idr:
+			case naluTypeAud:
+			case naluTypeIdr:
 				if !hasWriteSpsPps {
 					hasWriteSpsPps = true
 					if !hasSpsPps {
@@ -183,26 +186,26 @@ func (parser *Parser) getAnnexbH264(src []byte, w io.Writer) error {
 					}
 				}
 				fallthrough
-			case nalu_type_slice:
+			case naluTypeSlice:
 				fallthrough
-			case nalu_type_sei:
+			case naluTypeSei:
 				_, err := w.Write(startCode)
 				if err != nil {
 					return err
 				}
-				_, err = w.Write(src[index: index+nalLen])
+				_, err = w.Write(src[index : index+nalLen])
 				if err != nil {
 					return err
 				}
-			case nalu_type_sps:
+			case naluTypeSps:
 				fallthrough
-			case nalu_type_pps:
+			case naluTypePps:
 				hasSpsPps = true
 				_, err := parser.pps.Write(startCode)
 				if err != nil {
 					return err
 				}
-				_, err = parser.pps.Write(src[index: index+nalLen])
+				_, err = parser.pps.Write(src[index : index+nalLen])
 				if err != nil {
 					return err
 				}
@@ -210,12 +213,13 @@ func (parser *Parser) getAnnexbH264(src []byte, w io.Writer) error {
 			index += nalLen
 			dataSize -= nalLen
 		} else {
-			return naluBodyLenError
+			return errNaluBodyLenError
 		}
 	}
 	return nil
 }
 
+// Parse 解析
 func (parser *Parser) Parse(b []byte, isSeq bool, w io.Writer) (err error) {
 	switch isSeq {
 	case true:

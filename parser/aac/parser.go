@@ -3,8 +3,20 @@ package aac
 import (
 	"errors"
 	"io"
-	"github.com/gwuhaolin/livego/av"
+
+	"github.com/jslyzt/livego/av"
 )
+
+var (
+	errSpecificBufInvalid = errors.New("audio mpegspecific error")
+	errAudioBufInvalid    = errors.New("audiodata  invalid")
+)
+
+const (
+	adtsHeaderLen = 7
+)
+
+////////////////////////////////////////////////////////////////////////////////////////
 
 type mpegExtension struct {
 	objectType byte
@@ -24,21 +36,14 @@ type mpegCfgInfo struct {
 
 var aacRates = []int{96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350}
 
-var (
-	specificBufInvalid = errors.New("audio mpegspecific error")
-	audioBufInvalid    = errors.New("audiodata  invalid")
-)
-
-const (
-	adtsHeaderLen = 7
-)
-
+// Parser 解析
 type Parser struct {
 	gettedSpecific bool
 	adtsHeader     []byte
 	cfgInfo        *mpegCfgInfo
 }
 
+// NewParser 新解析器
 func NewParser() *Parser {
 	return &Parser{
 		gettedSpecific: false,
@@ -49,7 +54,7 @@ func NewParser() *Parser {
 
 func (parser *Parser) specificInfo(src []byte) error {
 	if len(src) < 2 {
-		return specificBufInvalid
+		return errSpecificBufInvalid
 	}
 	parser.gettedSpecific = true
 	parser.cfgInfo.objectType = (src[0] >> 3) & 0xff
@@ -60,7 +65,7 @@ func (parser *Parser) specificInfo(src []byte) error {
 
 func (parser *Parser) adts(src []byte, w io.Writer) error {
 	if len(src) <= 0 || !parser.gettedSpecific {
-		return audioBufInvalid
+		return errAudioBufInvalid
 	}
 
 	frameLen := uint16(len(src)) + 7
@@ -94,6 +99,7 @@ func (parser *Parser) adts(src []byte, w io.Writer) error {
 	return nil
 }
 
+// SampleRate 简单比率
 func (parser *Parser) SampleRate() int {
 	rate := 44100
 	if parser.cfgInfo.sampleRate <= byte(len(aacRates)-1) {
@@ -102,11 +108,12 @@ func (parser *Parser) SampleRate() int {
 	return rate
 }
 
+// Parse 解析
 func (parser *Parser) Parse(b []byte, packetType uint8, w io.Writer) (err error) {
 	switch packetType {
-	case av.AAC_SEQHDR:
+	case av.AacSeqhdr:
 		err = parser.specificInfo(b)
-	case av.AAC_RAW:
+	case av.AacRaw:
 		err = parser.adts(b, w)
 	}
 	return

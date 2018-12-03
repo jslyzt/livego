@@ -6,12 +6,11 @@ import (
 	"log"
 )
 
+// 常量定义
 const (
 	ADD = 0x0
 	DEL = 0x3
-)
 
-const (
 	SetDataFrame string = "@setDataFrame"
 	OnMetaData   string = "onMetaData"
 )
@@ -27,6 +26,7 @@ func init() {
 	setFrameFrame = b.Bytes()
 }
 
+// MetaDataReform 数据修正
 func MetaDataReform(p []byte, flag uint8) ([]byte, error) {
 	r := bytes.NewReader(p)
 	decoder := &Decoder{}

@@ -2,7 +2,8 @@ package flv
 
 import (
 	"fmt"
-	"github.com/gwuhaolin/livego/av"
+
+	"github.com/jslyzt/livego/av"
 )
 
 type flvTag struct {
@@ -100,37 +101,44 @@ type mediaTag struct {
 	compositionTime int32
 }
 
+// Tag 标签
 type Tag struct {
 	flvt   flvTag
 	mediat mediaTag
 }
 
+// SoundFormat 音频格式
 func (tag *Tag) SoundFormat() uint8 {
 	return tag.mediat.soundFormat
 }
 
+// AACPacketType aac包类型
 func (tag *Tag) AACPacketType() uint8 {
 	return tag.mediat.aacPacketType
 }
 
+// IsKeyFrame 是否关键帧
 func (tag *Tag) IsKeyFrame() bool {
-	return tag.mediat.frameType == av.FRAME_KEY
+	return tag.mediat.frameType == av.FrameKey
 }
 
+// IsSeq 是否顺序
 func (tag *Tag) IsSeq() bool {
-	return tag.mediat.frameType == av.FRAME_KEY &&
-		tag.mediat.avcPacketType == av.AVC_SEQHDR
+	return tag.mediat.frameType == av.FrameKey &&
+		tag.mediat.avcPacketType == av.AvcSeqhdr
 }
 
+// CodecID 加密ID
 func (tag *Tag) CodecID() uint8 {
 	return tag.mediat.codecID
 }
 
+// CompositionTime composition时间
 func (tag *Tag) CompositionTime() int32 {
 	return tag.mediat.compositionTime
 }
 
-// ParseMeidaTagHeader, parse video, audio, tag header
+// ParseMeidaTagHeader parse video, audio, tag header
 func (tag *Tag) ParseMeidaTagHeader(b []byte, isVideo bool) (n int, err error) {
 	switch isVideo {
 	case false:
@@ -153,7 +161,7 @@ func (tag *Tag) parseAudioHeader(b []byte) (n int, err error) {
 	tag.mediat.soundType = flags & 0x1
 	n++
 	switch tag.mediat.soundFormat {
-	case av.SOUND_AAC:
+	case av.SoundAac:
 		tag.mediat.aacPacketType = b[1]
 		n++
 	}
@@ -169,7 +177,7 @@ func (tag *Tag) parseVideoHeader(b []byte) (n int, err error) {
 	tag.mediat.frameType = flags >> 4
 	tag.mediat.codecID = flags & 0xf
 	n++
-	if tag.mediat.frameType == av.FRAME_INTER || tag.mediat.frameType == av.FRAME_KEY {
+	if tag.mediat.frameType == av.FrameInter || tag.mediat.frameType == av.FrameKey {
 		tag.mediat.avcPacketType = b[1]
 		for i := 2; i < 5; i++ {
 			tag.mediat.compositionTime = tag.mediat.compositionTime<<8 + int32(b[i])

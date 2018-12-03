@@ -2,21 +2,23 @@ package httpflv
 
 import (
 	"encoding/json"
-	"strings"
+	"log"
 	"net"
 	"net/http"
-	"log"
-	"github.com/gwuhaolin/livego/av"
-	"github.com/gwuhaolin/livego/protocol/rtmp"
+	"strings"
+
+	"github.com/jslyzt/livego/av"
+	"github.com/jslyzt/livego/protocol/rtmp"
 )
 
+// Server 服务
 type Server struct {
 	handler av.Handler
 }
 
 type stream struct {
 	Key string `json:"key"`
-	Id  string `json:"id"`
+	ID  string `json:"id"`
 }
 
 type streams struct {
@@ -24,12 +26,14 @@ type streams struct {
 	Players    []stream `json:"players"`
 }
 
+// NewServer 新建服务
 func NewServer(h av.Handler) *Server {
 	return &Server{
 		handler: h,
 	}
 }
 
+// Serve 服务
 func (server *Server) Serve(l net.Listener) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

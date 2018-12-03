@@ -12,10 +12,12 @@ const (
 	maxTSCacheNum = 3
 )
 
+// 变量
 var (
 	ErrNoKey = errors.New("No key for cache")
 )
 
+// TSCacheItem 缓存节点
 type TSCacheItem struct {
 	id   string
 	num  int
@@ -24,6 +26,7 @@ type TSCacheItem struct {
 	lm   map[string]TSItem
 }
 
+// NewTSCacheItem 新建缓存节点
 func NewTSCacheItem(id string) *TSCacheItem {
 	return &TSCacheItem{
 		id:  id,
@@ -33,11 +36,12 @@ func NewTSCacheItem(id string) *TSCacheItem {
 	}
 }
 
+// ID id
 func (tcCacheItem *TSCacheItem) ID() string {
 	return tcCacheItem.id
 }
 
-// TODO: found data race, fix it
+// GenM3U8PlayList TODO: found data race, fix it
 func (tcCacheItem *TSCacheItem) GenM3U8PlayList() ([]byte, error) {
 	var seq int
 	var getSeq bool
@@ -65,6 +69,7 @@ func (tcCacheItem *TSCacheItem) GenM3U8PlayList() ([]byte, error) {
 	return w.Bytes(), nil
 }
 
+// SetItem 设置item
 func (tcCacheItem *TSCacheItem) SetItem(key string, item TSItem) {
 	if tcCacheItem.ll.Len() == tcCacheItem.num {
 		e := tcCacheItem.ll.Front()
@@ -76,6 +81,7 @@ func (tcCacheItem *TSCacheItem) SetItem(key string, item TSItem) {
 	tcCacheItem.ll.PushBack(key)
 }
 
+// GetItem 获取item
 func (tcCacheItem *TSCacheItem) GetItem(key string) (TSItem, error) {
 	item, ok := tcCacheItem.lm[key]
 	if !ok {

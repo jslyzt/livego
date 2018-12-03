@@ -1,62 +1,60 @@
 package av
 
-import "io"
-import "fmt"
-
-const (
-	TAG_AUDIO          = 8
-	TAG_VIDEO          = 9
-	TAG_SCRIPTDATAAMF0 = 18
-	TAG_SCRIPTDATAAMF3 = 0xf
+import (
+	"fmt"
+	"io"
 )
 
+// 常量
 const (
+	TagAudio          = 8
+	TagVideo          = 9
+	TagScriptDataAmF0 = 18
+	TagScriptDataAmF3 = 0xf
+
 	MetadatAMF0  = 0x12
 	MetadataAMF3 = 0xf
+
+	SoundMp3                 = 2
+	SoundNellymoser16khzMono = 4
+	SoundNellymoser8khzMono  = 5
+	SoundNellymoser          = 6
+	SoundAlaw                = 7
+	SoundMulaw               = 8
+	SoundAac                 = 10
+	SoundSpeex               = 11
+
+	Sound55khz = 0
+	Sound11khz = 1
+	Sound22khz = 2
+	Sound44khz = 3
+
+	Sound8bit  = 0
+	Sound16bit = 1
+
+	SoundMono   = 0
+	SoundStereo = 1
+
+	AacSeqhdr = 0
+	AacRaw    = 1
+
+	AvcSeqhdr = 0
+	AvcNalu   = 1
+	AvcEos    = 2
+
+	FrameKey   = 1
+	FrameInter = 2
+
+	VideoH264 = 7
 )
 
-const (
-	SOUND_MP3                   = 2
-	SOUND_NELLYMOSER_16KHZ_MONO = 4
-	SOUND_NELLYMOSER_8KHZ_MONO  = 5
-	SOUND_NELLYMOSER            = 6
-	SOUND_ALAW                  = 7
-	SOUND_MULAW                 = 8
-	SOUND_AAC                   = 10
-	SOUND_SPEEX                 = 11
-
-	SOUND_5_5Khz = 0
-	SOUND_11Khz  = 1
-	SOUND_22Khz  = 2
-	SOUND_44Khz  = 3
-
-	SOUND_8BIT  = 0
-	SOUND_16BIT = 1
-
-	SOUND_MONO   = 0
-	SOUND_STEREO = 1
-
-	AAC_SEQHDR = 0
-	AAC_RAW    = 1
-)
-
-const (
-	AVC_SEQHDR = 0
-	AVC_NALU   = 1
-	AVC_EOS    = 2
-
-	FRAME_KEY   = 1
-	FRAME_INTER = 2
-
-	VIDEO_H264 = 7
-)
-
+// 变量
 var (
 	PUBLISH = "publish"
 	PLAY    = "play"
 )
 
-// Header can be converted to AudioHeaderInfo or VideoHeaderInfo
+// Packet Header can be converted to AudioHeaderInfo or VideoHeaderInfo
 type Packet struct {
 	IsAudio    bool
 	IsVideo    bool
@@ -67,15 +65,18 @@ type Packet struct {
 	Data       []byte
 }
 
+// PacketHeader 包处理
 type PacketHeader interface {
 }
 
+// AudioPacketHeader 音频包处理
 type AudioPacketHeader interface {
 	PacketHeader
 	SoundFormat() uint8
 	AACPacketType() uint8
 }
 
+// VideoPacketHeader 视频包处理
 type VideoPacketHeader interface {
 	PacketHeader
 	IsKeyFrame() bool
@@ -84,45 +85,55 @@ type VideoPacketHeader interface {
 	CompositionTime() int32
 }
 
+// Demuxer 分流器
 type Demuxer interface {
 	Demux(*Packet) (ret *Packet, err error)
 }
 
+// Muxer muxer
 type Muxer interface {
 	Mux(*Packet, io.Writer) error
 }
 
+// SampleRater 简单评估
 type SampleRater interface {
 	SampleRate() (int, error)
 }
 
+// CodecParser 解码
 type CodecParser interface {
 	SampleRater
 	Parse(*Packet, io.Writer) error
 }
 
+// GetWriter 写入
 type GetWriter interface {
 	GetWriter(Info) WriteCloser
 }
 
+// Handler 处理
 type Handler interface {
 	HandleReader(ReadCloser)
 	HandleWriter(WriteCloser)
 }
 
+// Alive 活跃
 type Alive interface {
 	Alive() bool
 }
 
+// Closer 关闭
 type Closer interface {
 	Info() Info
 	Close(error)
 }
 
+// CalcTime 任务
 type CalcTime interface {
 	CalcBaseTimestamp()
 }
 
+// Info 信息
 type Info struct {
 	Key   string
 	URL   string
@@ -130,6 +141,7 @@ type Info struct {
 	Inter bool
 }
 
+// IsInterval 时候间隔
 func (info Info) IsInterval() bool {
 	return info.Inter
 }
@@ -139,12 +151,14 @@ func (info Info) String() string {
 		info.Key, info.URL, info.UID, info.Inter)
 }
 
+// ReadCloser 自动读取关闭
 type ReadCloser interface {
 	Closer
 	Alive
 	Read(*Packet) error
 }
 
+// WriteCloser 自动写完关闭
 type WriteCloser interface {
 	Closer
 	Alive

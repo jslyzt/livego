@@ -2,23 +2,27 @@ package rtmp
 
 import (
 	"errors"
-	"github.com/gwuhaolin/livego/av"
-	"github.com/gwuhaolin/livego/protocol/rtmp/cache"
-	"github.com/gwuhaolin/livego/protocol/rtmp/rtmprelay"
-	"github.com/orcaman/concurrent-map"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/jslyzt/livego/av"
+	"github.com/jslyzt/livego/protocol/rtmp/cache"
+	"github.com/jslyzt/livego/protocol/rtmp/rtmprelay"
+	"github.com/orcaman/concurrent-map"
 )
 
+// 变量
 var (
 	EmptyID = ""
 )
 
+// RtmpStream rtmp流
 type RtmpStream struct {
 	streams cmap.ConcurrentMap //key
 }
 
+// NewRtmpStream 创建rtmp流
 func NewRtmpStream() *RtmpStream {
 	ret := &RtmpStream{
 		streams: cmap.New(),
@@ -27,6 +31,7 @@ func NewRtmpStream() *RtmpStream {
 	return ret
 }
 
+// HandleReader 处理reader
 func (rs *RtmpStream) HandleReader(r av.ReadCloser) {
 	info := r.Info()
 	log.Printf("HandleReader: info[%v]", info)
@@ -51,6 +56,7 @@ func (rs *RtmpStream) HandleReader(r av.ReadCloser) {
 	stream.AddReader(r)
 }
 
+// HandleWriter 处理writer
 func (rs *RtmpStream) HandleWriter(w av.WriteCloser) {
 	info := w.Info()
 	log.Printf("HandleWriter: info[%v]", info)
@@ -70,10 +76,12 @@ func (rs *RtmpStream) HandleWriter(w av.WriteCloser) {
 	}
 }
 
+// GetStreams 获取流
 func (rs *RtmpStream) GetStreams() cmap.ConcurrentMap {
 	return rs.streams
 }
 
+// CheckAlive 检查
 func (rs *RtmpStream) CheckAlive() {
 	for {
 		<-time.After(5 * time.Second)
@@ -86,6 +94,7 @@ func (rs *RtmpStream) CheckAlive() {
 	}
 }
 
+// Stream 流
 type Stream struct {
 	isStart bool
 	cache   *cache.Cache
@@ -94,15 +103,18 @@ type Stream struct {
 	info    av.Info
 }
 
+// PackWriterCloser 打包
 type PackWriterCloser struct {
 	init bool
 	w    av.WriteCloser
 }
 
+// GetWriter 获取写入
 func (p *PackWriterCloser) GetWriter() av.WriteCloser {
 	return p.w
 }
 
+// NewStream 新输出流
 func NewStream() *Stream {
 	return &Stream{
 		cache: cache.NewCache(),
@@ -110,6 +122,7 @@ func NewStream() *Stream {
 	}
 }
 
+// ID id
 func (s *Stream) ID() string {
 	if s.r != nil {
 		return s.r.Info().UID
@@ -117,14 +130,17 @@ func (s *Stream) ID() string {
 	return EmptyID
 }
 
+// GetReader reader
 func (s *Stream) GetReader() av.ReadCloser {
 	return s.r
 }
 
+// GetWs ws
 func (s *Stream) GetWs() cmap.ConcurrentMap {
 	return s.ws
 }
 
+// Copy 拷贝
 func (s *Stream) Copy(dst *Stream) {
 	for item := range s.ws.IterBuffered() {
 		v := item.Val.(*PackWriterCloser)
@@ -134,19 +150,20 @@ func (s *Stream) Copy(dst *Stream) {
 	}
 }
 
+// AddReader add reader
 func (s *Stream) AddReader(r av.ReadCloser) {
 	s.r = r
 	go s.TransStart()
 }
 
+// AddWriter add writer
 func (s *Stream) AddWriter(w av.WriteCloser) {
 	info := w.Info()
 	pw := &PackWriterCloser{w: w}
 	s.ws.Set(info.UID, pw)
 }
 
-/*检测本application下是否配置static_push,
-如果配置, 启动push远端的连接*/
+// StartStaticPush  检测本application下是否配置StaticPush，如果配置, 启动push远端的连接*/
 func (s *Stream) StartStaticPush() {
 	key := s.info.Key
 
@@ -187,6 +204,7 @@ func (s *Stream) StartStaticPush() {
 	}
 }
 
+// StopStaticPush 停止
 func (s *Stream) StopStaticPush() {
 	key := s.info.Key
 
@@ -226,6 +244,7 @@ func (s *Stream) StopStaticPush() {
 	}
 }
 
+// IsSendStaticPush 是否发送
 func (s *Stream) IsSendStaticPush() bool {
 	key := s.info.Key
 
@@ -259,13 +278,13 @@ func (s *Stream) IsSendStaticPush() bool {
 			return true
 			//staticpushObj.WriteAvPacket(&packet)
 			//log.Printf("SendStaticPush: WriteAvPacket %s ", pushurl)
-		} else {
-			log.Printf("SendStaticPush GetStaticPushObject %s error", pushurl)
 		}
+		log.Printf("SendStaticPush GetStaticPushObject %s error", pushurl)
 	}
 	return false
 }
 
+// SendStaticPush 发送
 func (s *Stream) SendStaticPush(packet av.Packet) {
 	key := s.info.Key
 
@@ -303,6 +322,7 @@ func (s *Stream) SendStaticPush(packet av.Packet) {
 	}
 }
 
+// TransStart 开始转换
 func (s *Stream) TransStart() {
 	s.isStart = true
 	var p av.Packet
@@ -340,10 +360,10 @@ func (s *Stream) TransStart() {
 				}
 				v.init = true
 			} else {
-				new_packet := p
+				newPacket := p
 				//writeType := reflect.TypeOf(v.w)
 				//log.Printf("w.Write: type=%v, %v", writeType, v.w.Info())
-				if err = v.w.Write(&new_packet); err != nil {
+				if err = v.w.Write(&newPacket); err != nil {
 					log.Printf("[%s] write packet error: %v, remove", v.w.Info(), err)
 					s.ws.Remove(item.Key)
 				}
@@ -352,6 +372,7 @@ func (s *Stream) TransStart() {
 	}
 }
 
+// TransStop 停止转换
 func (s *Stream) TransStop() {
 	log.Printf("TransStop: %s", s.info.Key)
 
@@ -362,6 +383,7 @@ func (s *Stream) TransStop() {
 	s.isStart = false
 }
 
+// CheckAlive 检查
 func (s *Stream) CheckAlive() (n int) {
 	if s.r != nil && s.isStart {
 		if s.r.Alive() {
@@ -400,6 +422,5 @@ func (s *Stream) closeInter() {
 				log.Printf("[%v] player closed and remove\n", v.w.Info())
 			}
 		}
-
 	}
 }

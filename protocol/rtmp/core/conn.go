@@ -4,12 +4,13 @@ import (
 	"encoding/binary"
 	"net"
 	"time"
-	"github.com/gwuhaolin/livego/utils/pool"
-	"github.com/gwuhaolin/livego/utils/pio"
+
+	"github.com/jslyzt/livego/utils/pio"
+	"github.com/jslyzt/livego/utils/pool"
 )
 
 const (
-	_                     = iota
+	_ = iota
 	idSetChunkSize
 	idAbortMessage
 	idAck
@@ -18,6 +19,7 @@ const (
 	idSetPeerBandwidth
 )
 
+// Conn 连接
 type Conn struct {
 	net.Conn
 	chunkSize           uint32
@@ -31,6 +33,7 @@ type Conn struct {
 	chunks              map[uint32]ChunkStream
 }
 
+// NewConn 新连接
 func NewConn(c net.Conn, bufferSize int) *Conn {
 	return &Conn{
 		Conn:                c,
@@ -85,38 +88,47 @@ func (conn *Conn) Write(c *ChunkStream) error {
 	return c.writeChunk(conn.rw, int(conn.chunkSize))
 }
 
+// Flush 刷新
 func (conn *Conn) Flush() error {
 	return conn.rw.Flush()
 }
 
+// Close 关闭
 func (conn *Conn) Close() error {
 	return conn.Conn.Close()
 }
 
+// RemoteAddr 远程地址
 func (conn *Conn) RemoteAddr() net.Addr {
 	return conn.Conn.RemoteAddr()
 }
 
+// LocalAddr 本地地址
 func (conn *Conn) LocalAddr() net.Addr {
 	return conn.Conn.LocalAddr()
 }
 
+// SetDeadline 设置超时
 func (conn *Conn) SetDeadline(t time.Time) error {
 	return conn.Conn.SetDeadline(t)
 }
 
+// NewAck 创建ack
 func (conn *Conn) NewAck(size uint32) ChunkStream {
 	return initControlMsg(idAck, 4, size)
 }
 
+// NewSetChunkSize 设置块大小
 func (conn *Conn) NewSetChunkSize(size uint32) ChunkStream {
 	return initControlMsg(idSetChunkSize, 4, size)
 }
 
+// NewWindowAckSize 设置窗口ack大小
 func (conn *Conn) NewWindowAckSize(size uint32) ChunkStream {
 	return initControlMsg(idWindowAckSize, 4, size)
 }
 
+// NewSetPeerBandwidth 设置
 func (conn *Conn) NewSetPeerBandwidth(size uint32) ChunkStream {
 	ret := initControlMsg(idSetPeerBandwidth, 5, size)
 	ret.Data[4] = 2
@@ -189,6 +201,7 @@ func (conn *Conn) userControlMsg(eventType, buflen uint32) ChunkStream {
 	return ret
 }
 
+// SetBegin 开始
 func (conn *Conn) SetBegin() {
 	ret := conn.userControlMsg(streamBegin, 4)
 	for i := 0; i < 4; i++ {
@@ -197,6 +210,7 @@ func (conn *Conn) SetBegin() {
 	conn.Write(&ret)
 }
 
+// SetRecorded 记录
 func (conn *Conn) SetRecorded() {
 	ret := conn.userControlMsg(streamIsRecorded, 4)
 	for i := 0; i < 4; i++ {

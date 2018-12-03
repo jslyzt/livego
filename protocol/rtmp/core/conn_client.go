@@ -10,9 +10,10 @@ import (
 	neturl "net/url"
 	"strings"
 
-	"github.com/gwuhaolin/livego/protocol/amf"
-	"github.com/gwuhaolin/livego/av"
 	"log"
+
+	"github.com/jslyzt/livego/av"
+	"github.com/jslyzt/livego/protocol/amf"
 )
 
 var (
@@ -25,10 +26,12 @@ var (
 	onBWDone       = "onBWDone"
 )
 
+// 错误定义
 var (
 	ErrFail = errors.New("respone err")
 )
 
+// ConnClient 客户端
 type ConnClient struct {
 	done       bool
 	transID    int
@@ -45,6 +48,7 @@ type ConnClient struct {
 	bytesw     *bytes.Buffer
 }
 
+// NewConnClient 新客户端
 func NewConnClient() *ConnClient {
 	return &ConnClient{
 		transID: 1,
@@ -54,6 +58,7 @@ func NewConnClient() *ConnClient {
 	}
 }
 
+// DecodeBatch 批量解码
 func (connClient *ConnClient) DecodeBatch(r io.Reader, ver amf.Version) (ret []interface{}, err error) {
 	vs, err := connClient.decoder.DecodeBatch(r, ver)
 	return vs, err
@@ -122,7 +127,6 @@ func (connClient *ConnClient) readRespMsg() error {
 					}
 				}
 			}
-
 			return nil
 		}
 	}
@@ -180,7 +184,7 @@ func (connClient *ConnClient) writeCreateStreamMsg() error {
 		}
 
 		if err == ErrFail {
-			log.Println("writeCreateStreamMsg readRespMsg err=%v", err)
+			log.Printf("writeCreateStreamMsg readRespMsg err=%v\n", err)
 			return err
 		}
 	}
@@ -208,6 +212,7 @@ func (connClient *ConnClient) writePlayMsg() error {
 	return connClient.readRespMsg()
 }
 
+// Start 开始
 func (connClient *ConnClient) Start(url string, method string) error {
 	u, err := neturl.Parse(url)
 	if err != nil {
@@ -296,8 +301,8 @@ func (connClient *ConnClient) Start(url string, method string) error {
 }
 
 func (connClient *ConnClient) Write(c ChunkStream) error {
-	if c.TypeID == av.TAG_SCRIPTDATAAMF0 ||
-		c.TypeID == av.TAG_SCRIPTDATAAMF3 {
+	if c.TypeID == av.TagScriptDataAmF0 ||
+		c.TypeID == av.TagScriptDataAmF3 {
 		var err error
 		if c.Data, err = amf.MetaDataReform(c.Data, amf.ADD); err != nil {
 			return err
@@ -307,14 +312,17 @@ func (connClient *ConnClient) Write(c ChunkStream) error {
 	return connClient.conn.Write(&c)
 }
 
+// Flush 刷新缓存
 func (connClient *ConnClient) Flush() error {
 	return connClient.conn.Flush()
 }
 
+// Read 读取
 func (connClient *ConnClient) Read(c *ChunkStream) (err error) {
 	return connClient.conn.Read(c)
 }
 
+// GetInfo 获取信息
 func (connClient *ConnClient) GetInfo() (app string, name string, url string) {
 	app = connClient.app
 	name = connClient.title
@@ -322,10 +330,12 @@ func (connClient *ConnClient) GetInfo() (app string, name string, url string) {
 	return
 }
 
-func (connClient *ConnClient) GetStreamId() uint32 {
+// GetStreamID 获取id
+func (connClient *ConnClient) GetStreamID() uint32 {
 	return connClient.streamid
 }
 
+// Close 关闭
 func (connClient *ConnClient) Close(err error) {
 	connClient.conn.Close()
 }

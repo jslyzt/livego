@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"log"
 
-	"github.com/gwuhaolin/livego/protocol/amf"
-	"github.com/gwuhaolin/livego/av"
+	"github.com/jslyzt/livego/av"
+	"github.com/jslyzt/livego/protocol/amf"
 )
 
+// 常量
 const (
 	SetDataFrame string = "@setDataFrame"
 	OnMetaData   string = "onMetaData"
@@ -24,20 +25,24 @@ func init() {
 	setFrameFrame = b.Bytes()
 }
 
+// SpecialCache 特殊cache
 type SpecialCache struct {
 	full bool
 	p    *av.Packet
 }
 
+// NewSpecialCache new
 func NewSpecialCache() *SpecialCache {
 	return &SpecialCache{}
 }
 
+// Write 写入
 func (specialCache *SpecialCache) Write(p *av.Packet) {
 	specialCache.p = p
 	specialCache.full = true
 }
 
+// Send 发送
 func (specialCache *SpecialCache) Send(w av.WriteCloser) error {
 	if !specialCache.full {
 		return nil
